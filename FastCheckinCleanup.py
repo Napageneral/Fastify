@@ -14,24 +14,11 @@ class ContextTerm(object):
 
 class ContextReplacer(object):
 	def __init__(self):		
-		self.scopeStack = None
+		self.scopeStack = []
 		self.currentScopeTerms = []
 
-	def ReadLine(self, line):
-		if self.NewScopeCheck(line):			
-			if self.scopeStack == None:
-				self.scopeStack = []
-			else:
-				self.scopeStack.append(copy.deepcopy(self.currentScopeTerms))
-				self.currentScopeTerms.clear()
-
-		if self.EndScopeCheck(line):
-			if not self.scopeStack:
-				self.currentScopeTerms = []
-			else:
-				self.currentScopeTerms = self.scopeStack.pop()
-
-		if self.scopeStack:
+	def ReadLine(self, line):		
+		if self.scopeStack:			
 			for scope in self.scopeStack:
 				for term in scope:					
 					line = self._replaceTerm(term, line)
@@ -39,15 +26,30 @@ class ContextReplacer(object):
 					line = self._replaceTerm(term, line)		
 		return line
 
-	def NewScopeCheck(self, line):
+	def _NewScopeCheck(self, line):
 		if ScopeBeginEx.findall(line) == []:
 			return False
 		return True
 
-	def EndScopeCheck(self, line):
+	def NewScopeCheck(self, line):
+		if self._NewScopeCheck(line):			
+			if self.scopeStack == None:
+				self.scopeStack = []
+			else:
+				self.scopeStack.append(copy.deepcopy(self.currentScopeTerms))
+				self.currentScopeTerms.clear()
+
+	def _EndScopeCheck(self, line):
 		if ScopeEndEx.findall(line) == []:
 			return False	
 		return True
+
+	def EndScopeCheck(self, line):
+		if self._EndScopeCheck(line):
+			if not self.scopeStack:
+				self.currentScopeTerms = []
+			else:
+				self.currentScopeTerms = self.scopeStack.pop()
 
 	def AddTerm(self, oldName, newName):		
 		self.currentScopeTerms.append(ContextTerm(oldName, newName))
@@ -55,8 +57,8 @@ class ContextReplacer(object):
 	def _replaceTerm(self, term, line):	
 		global TermToReplace
 		TermToReplace = term		
-		newLineTermReplaceEx = re.compile('\A'+TermToReplace.oldName)
-		termReplaceEx = re.compile('([\s,=\(])'+TermToReplace.oldName+'([,.\s\)])')
+		newLineTermReplaceEx = re.compile('\A'+TermToReplace.oldName)		
+		termReplaceEx = re.compile('([-\s,=\(])'+TermToReplace.oldName+'([,.\s\)\(\}])')
 		if termReplaceEx.findall(line) != []:
 			line = termReplaceEx.sub(self._termReplace, line)
 		if newLineTermReplaceEx.findall(line) != []:
@@ -70,11 +72,9 @@ class ContextReplacer(object):
 
 
 
-VariablePrefixCheckEx = re.compile('\w+ lng|\w+ lst|\w+ dct|\w+ str|\w+ byt|\w+ bln|\w+ dbl|\w+ cur|\w+ sng|\w+ fda|\w+ obj|\w+ sb', re.IGNORECASE)
+VariablePrefixCheckEx = re.compile('\w{3,} enm|\w{3,} lng|\w{3,} lst|\w{3,} dct|\w{3,} str|\w{3,} byt|\w{3,} bln|\w{3,} dbl|\w{3,} cur|\w{3,} sng|\w{3,} fda|\w{3,} obj|\w{3,} sb', re.IGNORECASE)
 ForEachPrefixCheckEx = re.compile('For each lng|For each lst|For each dct|For each str|For each byt|For each bln|For each dbl|For each cur|For each sng|For each fda|For each obj|For each sb', re.IGNORECASE)
-MemberAndParameterPrefixCheckEx = re.compile('\w+ [mp]lng|\w+ [mp]lst|\w+ [mp]dct|\w+ [mp]str|\w+ [mp]byt|\w+ [mp]bln|\w+ [mp]dbl|\w+ [mp]cur|\w+ [mp]sng|\w+ [mp]fda|\w+ [mp]obj|\w+ [mp]sb', re.IGNORECASE)
-#MemberVariablePrefixCheckEx = re.compile('\w+ mlst|\w+ mdct|\w+ mstr|\w+ mbyt|\w+ mbln|\w+ mdbl|\w+ mcur|\w+ msng|\w+ mfda|\w+ mobj|\w+ msb', re.IGNORECASE)
-#ParameterPrefixCheckEx = re.compile('\w+ plst|\w+ pdct|\w+ pstr|\w+ pbyt|\w+ pbln|\w+ pdbl|\w+ pcur|\w+ psng|\w+ pfda|\w+ pobj|\w+ psb', re.IGNORECASE)
+MemberAndParameterPrefixCheckEx = re.compile('\w{3,} [mp]enm| mdta |\w{3,} [mp]lng|\w{3,} [mp]lst|\w{3,} [mp]dct|\w{3,} [mp]str|\w{3,} [mp]byt|\w{3,} [mp]bln|\w{3,} [mp]dbl|\w{3,} [mp]cur|\w{3,} [mp]sng|\w{3,} [mp]fda|\w{3,} [mp]obj|\w{3,} [mp]sb|\w{3,} [mp]vnt', re.IGNORECASE)
 
 def PrefixCheck(line):
 	if 'Property' in line:
@@ -86,13 +86,6 @@ def PrefixCheck(line):
 	if ForEachPrefixCheckEx.findall(line) != []:
 		return False
 	return True
-
-
-# def ReplaceNewKeyword(line, replacer):	
-# 	varKeyword, varPrefix, varName, varType = MainReplace(NewKeywordReplaceEx.findall(line), replacer)
-# 	replacement = varKeyword+varPrefix+varName[:1].capitalize()+varName[1:]+" as New "+varType
-# 	return NewKeywordReplaceEx.sub(replacement, line)
-
 
 
 NewKeywordReplaceEx = re.compile('(\w+) (\w+) as New (\S+)', re.IGNORECASE)
@@ -117,10 +110,12 @@ VariablePrefixDict = {
 					'ggFda.ggFdaCls':'fda',
 					'Int32':'lng',
 					'Integer':'lng',
-					'fda':'fda'}
+					'fda':'fda',
+					'Text':'sb',
+					'ggSql':'con'}
 
 AlphaNumericEx = re.compile('\w+', re.IGNORECASE)
-parameterKeywords = ['ByVal', 'ByRef']
+parameterKeywords = ['ByVal ', 'ByRef ', 'ByVal', 'ByRef']
 ArraySet = ['String', 'Byte', 'Boolean', 'Double', 'Decimal', 'Single', 'Int32', 'Integer']
 def MainReplace(match):
 	if match.group(1) != None:		
@@ -151,7 +146,7 @@ def MainReplace(match):
 			else:
 				varPrefix = 'a'+varPrefix
 
-	if varKeyword in parameterKeywords:
+	if AlphaNumericEx.search(varKeyword).group() in parameterKeywords:		
 		varPrefix = 'p'+varPrefix
 
 	if varType == 'fda':
@@ -159,6 +154,11 @@ def MainReplace(match):
 
 	if varType == 'Integer':
 		varType = 'Int32'
+
+	
+	if replacer.scopeStack:		
+		if len(replacer.scopeStack) == 1:			
+			varPrefix = 'm'+varPrefix
 	
 	replacer.AddTerm(varName, varPrefix+varName[:1].capitalize()+varName[1:])
 	return (varKeyword, varPrefix, varName, varType)
@@ -166,8 +166,7 @@ def MainReplace(match):
 
 
 
-def main():
-	print('At least we started')
+def main():	
 	rootDir = sys.argv[1]
 	newDir = sys.argv[2]
 
@@ -181,7 +180,9 @@ def main():
 					with open(newDir+path[len(rootDir):]+'\\'+file, 'w') as oFile:					
 						global replacer 
 						replacer = ContextReplacer()
-						for line in iFile:												
+						for line in iFile:							
+							replacer.NewScopeCheck(line)
+							replacer.EndScopeCheck(line)												
 							if PrefixCheck(line):
 								line = NewKeywordReplaceEx.sub(NewKeywordReplace, line)
 							if PrefixCheck(line):
