@@ -58,7 +58,7 @@ class ContextReplacer(object):
 		global TermToReplace
 		TermToReplace = term		
 		newLineTermReplaceEx = re.compile('\A'+TermToReplace.oldName)		
-		termReplaceEx = re.compile('([-\s,=\(])'+TermToReplace.oldName+'([,.\s\)\(\}])')
+		termReplaceEx = re.compile('([-\s,=\(\{])'+TermToReplace.oldName+'([,.\s\)\(\}])')
 		if termReplaceEx.findall(line) != []:
 			line = termReplaceEx.sub(self._termReplace, line)
 		if newLineTermReplaceEx.findall(line) != []:
@@ -115,7 +115,7 @@ VariablePrefixDict = {
 					'ggSql':'con'}
 
 AlphaNumericEx = re.compile('\w+', re.IGNORECASE)
-parameterKeywords = ['ByVal ', 'ByRef ', 'ByVal', 'ByRef']
+parameterKeywords = ['ByVal ', 'ByRef ', 'ByVal', 'ByRef', 'Optional']
 ArraySet = ['String', 'Byte', 'Boolean', 'Double', 'Decimal', 'Single', 'Int32', 'Integer']
 def MainReplace(match):
 	if match.group(1) != None:		
